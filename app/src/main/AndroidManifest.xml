@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.espapp"
     android:versionCode="1"
     android:versionName="1.0">
@@ -9,6 +10,17 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    
+    <!-- Permission for overlay -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Permission to query installed packages (for launching Standoff 2) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        android:tools:ignore="QueryAllPackagesPermission" />
+    
+    <queries>
+        <package android:name="com.axlebolt.standoff2" />
+    </queries>
 
     <uses-sdk
         android:minSdkVersion="21"
@@ -34,6 +46,10 @@
 
         <service
             android:name=".EspService"
+            android:exported="false" />
+
+        <service
+            android:name=".OverlayService"
             android:exported="false" />
 
     </application>

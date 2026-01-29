@@ -4,4 +4,10 @@
     <string name="start_button">Start ESP</string>
     <string name="stop_button">Stop ESP</string>
     <string name="status_label">Status: </string>
+    <string name="logs_label">Logs:</string>
+    <string name="overlay_status">Status: %s</string>
+    <string name="overlay_players">Players: %d</string>
+    <string name="overlay_fps">FPS: %d</string>
+    <string name="overlay_stop">Stop ESP</string>
+    <string name="overlay_hide">Hide Menu</string>
 </resources>

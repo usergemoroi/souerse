@@ -115,6 +115,8 @@ void ESP::Render() {
     }
 
     memcpy(playerCountPos, &validPlayers, 2);
+    
+    last_player_count_ = validPlayers;
 
     size_t totalSize = writer - g_binary_buffer;
     g_socket_server.set_player_data(g_binary_buffer, totalSize);
