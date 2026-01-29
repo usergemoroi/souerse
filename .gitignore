@@ -1,6 +1,7 @@
 # Built application files
 *.apk
 !souerse-*.apk
+# Release artifact copied to repo root
 V2release.apk
 *.aar
 *.ap_
