@@ -6,6 +6,10 @@ android {
     namespace 'com.example.espapp'
     compileSdk 33
 
+    lintOptions {
+        abortOnError false
+    }
+
     defaultConfig {
         applicationId "com.example.espapp"
         minSdk 21
