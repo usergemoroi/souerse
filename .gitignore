@@ -1,6 +1,7 @@
 # Built application files
 *.apk
 !souerse-*.apk
+V2release.apk
 *.aar
 *.ap_
 *.aab
@@ -89,3 +90,4 @@ libs/
 *~
 *.swp
 *.bak
+my-release-key.jks
