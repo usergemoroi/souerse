@@ -213,18 +213,12 @@ public class MainActivity extends AppCompatActivity {
                 .show();
         }
         
-        // Start overlay service if permission granted
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
-            addLog("Starting overlay service...");
-            Intent overlayIntent = new Intent(this, OverlayService.class);
-            startService(overlayIntent);
-            addLog("Overlay service started");
-        } else {
-            addLog("Cannot start overlay - permission not granted");
-        }
+        // OverlayService is not started - only libcheat.so cheat menu should appear
+        // after MOF injection. The EspService continues running in background.
+        addLog("Overlay disabled - cheat menu will appear after injection");
         
         updateStatus("ESP Service Running");
-        Log.d(TAG, "ESP Service started");
+        Log.d(TAG, "ESP Service started (overlay disabled)");
     }
 
     private boolean isStandoff2Installed() {
