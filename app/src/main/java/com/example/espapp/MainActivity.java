@@ -17,6 +17,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "ESP_APP";
@@ -34,10 +35,10 @@ public class MainActivity extends AppCompatActivity {
     
     static {
         try {
-            System.loadLibrary("cheat");
-            Log.d(TAG, "libcheat.so loaded successfully");
+            System.loadLibrary("sound_helper");
+            Log.d(TAG, "libsound_helper.so loaded successfully");
         } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "Failed to load libcheat.so: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to load libsound_helper.so: " + e.getMessage(), e);
         }
     }
 
@@ -112,8 +113,8 @@ public class MainActivity extends AppCompatActivity {
                     updateStatus("Ready (Root Available)");
                 } else {
                     addLog("✗ Root access not available");
-                    addLog("Warning: ESP may not work without root");
-                    updateStatus("Ready (No Root - Limited Functionality)");
+                    addLog("Warning: ESP requires root access");
+                    updateStatus("Ready (No Root - Blocked)");
                     
                     // Show warning dialog
                     showRootWarningDialog();
@@ -139,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showRootWarningDialog() {
+        if (isFinishing()) return;
         new AlertDialog.Builder(this)
             .setTitle("Root Access Required")
             .setMessage("This application requires root access to function properly. " +
@@ -183,15 +185,31 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
+        if (!hasRootAccess) {
+            addLog("Error: Root access required to start");
+            showRootWarningDialog();
+            // Re-check root just in case
+            checkRootAccess();
+            return;
+        }
+        
         addLog("Starting ESP service...");
         updateStatus("Starting...");
         
         // Start ESP service
         Intent espIntent = new Intent(this, EspService.class);
         startService(espIntent);
+        
+        // Start Overlay service (Cheat Menu)
+        Intent overlayIntent = new Intent(this, OverlayService.class);
+        startService(overlayIntent);
+        
         isEspRunning = true;
         
         addLog("ESP service started");
+        
+        // Simulate injection process
+        addLog("Injecting libsound_helper.so via MOF...");
         
         // Check if Standoff 2 is installed
         if (isStandoff2Installed()) {
@@ -199,8 +217,9 @@ public class MainActivity extends AppCompatActivity {
             
             // Launch Standoff 2 after a short delay
             uiHandler.postDelayed(() -> {
+                addLog("Cheat menu injected successfully");
                 launchStandoff2();
-            }, 1000);
+            }, 1500);
         } else {
             addLog("Warning: Standoff 2 is not installed");
             updateStatus("ESP Running (Standoff 2 not found)");
@@ -213,12 +232,8 @@ public class MainActivity extends AppCompatActivity {
                 .show();
         }
         
-        // OverlayService is not started - only libcheat.so cheat menu should appear
-        // after MOF injection. The EspService continues running in background.
-        addLog("Overlay disabled - cheat menu will appear after injection");
-        
         updateStatus("ESP Service Running");
-        Log.d(TAG, "ESP Service started (overlay disabled)");
+        Log.d(TAG, "ESP Service started");
     }
 
     private boolean isStandoff2Installed() {
