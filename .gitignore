@@ -3,6 +3,8 @@
 !souerse-*.apk
 # Release artifact copied to repo root
 V2release.apk
+# Exception: Allow V2release.apk in apk/ folder
+!apk/V2release.apk
 *.aar
 *.ap_
 *.aab
