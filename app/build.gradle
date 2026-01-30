@@ -14,8 +14,8 @@ android {
         applicationId "com.example.espapp"
         minSdk 21
         targetSdk 33
-        versionCode 3
-        versionName "3.0"
+        versionCode 4
+        versionName "4.0"
         ndkVersion "25.2.9519653"
 
         ndk {
@@ -30,11 +30,21 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "password"
+            keyAlias "release"
+            keyPassword "password"
+        }
+    }
+
     buildTypes {
         debug {
             debuggable true
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
             crunchPngs false
