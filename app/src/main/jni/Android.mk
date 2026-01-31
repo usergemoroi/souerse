@@ -13,6 +13,7 @@ LOCAL_SRC_FILES := \
     src/sdk/player/player.cpp \
     src/sdk/game/game.cpp \
     src/render/native_renderer.cpp \
+    src/render/menu_renderer.cpp \
     src/hooks/gl_hook.cpp
 
 LOCAL_C_INCLUDES := src

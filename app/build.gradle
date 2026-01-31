@@ -14,8 +14,8 @@ android {
         applicationId "com.example.espapp"
         minSdk 21
         targetSdk 33
-        versionCode 6
-        versionName "6.0"
+        versionCode 7
+        versionName "7.0"
         ndkVersion "25.2.9519653"
 
         ndk {

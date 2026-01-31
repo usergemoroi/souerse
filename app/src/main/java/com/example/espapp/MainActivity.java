@@ -20,7 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "ESP_APP";
+    private static final String TAG = "ESP_APP_V7";
     private static final int OVERLAY_PERMISSION_REQUEST_CODE = 1000;
     
     private TextView statusText;

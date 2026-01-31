@@ -17,9 +17,10 @@ import android.widget.FrameLayout;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class OverlayService extends Service {
-    private static final String TAG = "OVERLAY_SERVICE";
+    private static final String TAG = "OVERLAY_SERVICE_V7";
     
-    private CheatMenu cheatMenu;
+    // V7: No more overlay menu - everything is rendered natively
+    private CheatMenuV7 cheatMenu;
     
     private EspSettings settings;
     
@@ -52,12 +53,15 @@ public class OverlayService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "Overlay service created");
+        Log.d(TAG, "Overlay service V7 created - Native rendering mode");
         
         uiHandler = new Handler(Looper.getMainLooper());
         settings = EspSettings.getInstance(this);
         
-        createOverlayRenderer();
+        // V7: Initialize native renderer only
+        initializeNativeRenderer();
+        
+        // V7: Simplified menu (no overlay)
         createCheatMenu();
         
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -81,10 +85,9 @@ public class OverlayService extends Service {
         }
     }
 
-    private void createOverlayRenderer() {
-        // V6: Native rendering - no overlay for ESP, only menu
-        // ESP is now rendered natively in the game by C++ code
-        Log.d(TAG, "V6: Native ESP rendering enabled");
+    private void initializeNativeRenderer() {
+        // V7: Pure native rendering - menu is also rendered via OpenGL
+        Log.d(TAG, "V7: Initializing native OpenGL menu renderer");
         
         // Initialize native renderer with screen dimensions
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
@@ -95,16 +98,18 @@ public class OverlayService extends Service {
             espService.initNativeRenderer(screenWidth, screenHeight);
             espService.updateNativeSettings(settings);
             Log.d(TAG, "Native renderer initialized: " + screenWidth + "x" + screenHeight);
+            Log.d(TAG, "Native menu renderer active - No overlay window needed");
         }
     }
     
     private void createCheatMenu() {
-        cheatMenu = new CheatMenu(this);
-        Log.d(TAG, "Cheat menu created");
+        // V7: Simplified menu - no overlay, settings only
+        cheatMenu = new CheatMenuV7(this);
+        Log.d(TAG, "CheatMenu V7 created (native rendering)");
     }
 
     private void startEspUpdateLoop() {
-        // V6: Settings update loop for native renderer
+        // V7: Settings update loop for native renderer and menu
         uiHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -115,14 +120,19 @@ public class OverlayService extends Service {
     }
 
     private void updateEspData() {
-        // V6: No longer needed - native code handles ESP data
+        // V7: Native code handles all ESP data
     }
     
     private void updateNativeSettings() {
-        // Send updated settings to native renderer
+        // V7: Send updated settings to native renderer
         EspService espService = EspService.getInstance();
         if (espService != null) {
             espService.updateNativeSettings(settings);
+        }
+        
+        // V7: Menu reads settings directly from native renderer
+        if (cheatMenu != null) {
+            cheatMenu.syncSettings();
         }
     }
 }
