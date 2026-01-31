@@ -318,4 +318,32 @@ Java_com_example_espapp_EspService_initNativeRenderer(JNIEnv* env, jobject thiz,
 {
     NativeRenderer::getInstance().init(screenWidth, screenHeight);
     LOGD("Native renderer initialized: %dx%d", screenWidth, screenHeight);
+    
+    // Initialize menu renderer
+    if (g_esp_instance) {
+        // Menu renderer is created with ESPRenderer
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_espapp_EspService_handleTouch(JNIEnv* env, jobject thiz,
+    jfloat x, jfloat y, jboolean isDown)
+{
+    // This would be called from a touch input handler in Java
+    // For V7, we're simplifying by removing the overlay menu entirely
+    // Touch events would be handled through the game's input system
+    LOGD("Touch event: x=%.2f, y=%.2f, isDown=%d", x, y, isDown);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_espapp_EspService_handleMove(JNIEnv* env, jobject thiz,
+    jfloat x, jfloat y)
+{
+    LOGD("Touch move: x=%.2f, y=%.2f", x, y);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_espapp_EspService_toggleMenu(JNIEnv* env, jobject thiz)
+{
+    LOGD("Toggle menu called");
 }

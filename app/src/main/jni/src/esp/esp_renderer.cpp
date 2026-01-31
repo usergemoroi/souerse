@@ -5,6 +5,7 @@
 
 ESPRenderer::ESPRenderer() 
     : renderer_(NativeRenderer::getInstance()), localTeam_(0) {
+    menuRenderer_ = std::make_unique<MenuRenderer>();
 }
 
 void ESPRenderer::renderESP(const std::vector<Player>& players, const Matrix& viewMatrix, 
@@ -30,6 +31,11 @@ void ESPRenderer::renderESP(const std::vector<Player>& players, const Matrix& vi
         if (team == localTeam && !settings.wallhack) continue;
         
         renderPlayerESP(player, viewMatrix);
+    }
+    
+    // Render native menu
+    if (menuRenderer_) {
+        menuRenderer_->render();
     }
     
     renderer_.endFrame();
@@ -279,11 +285,15 @@ void ESPRenderer::renderAimbotIndicator() {
 }
 
 void ESPRenderer::renderMenu() {
-    // Native menu rendering would go here
-    // This would implement a full ImGui-style menu
-    // For now, we'll keep menu control in Java for simplicity
+    if (menuRenderer_) {
+        menuRenderer_->render();
+    }
 }
 
 void ESPRenderer::setSettings(const RenderSettings& settings) {
     renderer_.setSettings(settings);
+    
+    if (menuRenderer_) {
+        menuRenderer_->setSettings(&renderer_.getSettings());
+    }
 }

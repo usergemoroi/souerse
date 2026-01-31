@@ -1,8 +1,10 @@
 #pragma once
 #include "../types.h"
 #include "../render/native_renderer.h"
+#include "../render/menu_renderer.h"
 #include "../sdk/player/player.h"
 #include <vector>
+#include <memory>
 
 class ESPRenderer {
 public:
@@ -16,6 +18,8 @@ public:
     void setSettings(const RenderSettings& settings);
     RenderSettings& getSettings() { return renderer_.getSettings(); }
     
+    MenuRenderer* getMenuRenderer() { return menuRenderer_.get(); }
+    
 private:
     void renderPlayerESP(const Player& player, const Matrix& viewMatrix);
     void renderLines(const Vec2& screenPos, const Vec2& headPos);
@@ -27,6 +31,7 @@ private:
     void renderAimbotIndicator();
     
     NativeRenderer& renderer_;
+    std::unique_ptr<MenuRenderer> menuRenderer_;
     Vec3 localPosition_;
     uint8_t localTeam_;
 };
