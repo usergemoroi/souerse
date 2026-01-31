@@ -9,12 +9,15 @@ LOCAL_SRC_FILES := \
     src/memory/memory.cpp \
     src/network/socket_server.cpp \
     src/esp/esp.cpp \
+    src/esp/esp_renderer.cpp \
     src/sdk/player/player.cpp \
-    src/sdk/game/game.cpp
+    src/sdk/game/game.cpp \
+    src/render/native_renderer.cpp \
+    src/hooks/gl_hook.cpp
 
 LOCAL_C_INCLUDES := src
 
-LOCAL_LDLIBS := -llog
+LOCAL_LDLIBS := -llog -lGLESv2 -lEGL -ldl
 
 LOCAL_CFLAGS += \
     -O2 \

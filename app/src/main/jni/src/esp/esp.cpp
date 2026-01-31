@@ -1,4 +1,5 @@
 #include "esp.h"
+#include "esp_renderer.h"
 #include "../memory/memory.h"
 #include "../offsets.h"
 #include "../sdk/game/game.h"
@@ -18,7 +19,16 @@ struct PlayerCache {
 static std::unordered_map<uint32_t, PlayerCache> g_player_cache;
 static int g_frame_counter = 0;
 
-ESP::ESP(uint32_t libunity_base) : libunity_base_(libunity_base) {}
+ESP::ESP(uint32_t libunity_base) : libunity_base_(libunity_base) {
+    native_renderer_ = new ESPRenderer();
+}
+
+ESP::~ESP() {
+    if (native_renderer_) {
+        delete native_renderer_;
+        native_renderer_ = nullptr;
+    }
+}
 
 void ESP::Render() {
     g_frame_counter++;
@@ -123,5 +133,33 @@ void ESP::Render() {
 
     if (g_frame_counter % 5000 == 0) {
         g_player_cache.clear();
+    }
+}
+
+void ESP::RenderNative() {
+    if (!native_renderer_) return;
+    
+    Game game(libunity_base_);
+    
+    if (!game.IsValid()) {
+        return;
+    }
+
+    Matrix viewMatrix;
+    if (!game.ReadViewMatrix(viewMatrix)) {
+        return;
+    }
+
+    Vec3 localPos = game.GetLocalPosition();
+    uint8_t localTeam = game.GetLocalTeam();
+    std::vector<Player> players = game.GetPlayers();
+    
+    native_renderer_->renderESP(players, viewMatrix, localPos, localTeam);
+    
+    last_player_count_ = 0;
+    for (const Player& player : players) {
+        if (player.IsValid()) {
+            last_player_count_++;
+        }
     }
 }
