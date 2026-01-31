@@ -23,11 +23,15 @@ public class EspService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "Service onStartCommand called");
-        sendLog("ESP Service starting...");
+        sendLog("═══════════════════════════════");
+        sendLog("▶ ESP Service Initializing...");
+        sendLog("═══════════════════════════════");
         
         if (!isRunning) {
             isRunning = true;
             startEspThread();
+        } else {
+            sendLog("Service already running");
         }
         
         return START_STICKY;
@@ -41,14 +45,27 @@ public class EspService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "Service destroyed");
-        sendLog("ESP Service stopping...");
-        stopNativeEspServer();
+        sendLog("═══════════════════════════════");
+        sendLog("⏹ ESP Service Stopping...");
+        sendLog("═══════════════════════════════");
+        
+        try {
+            stopNativeEspServer();
+            sendLog("✓ Native ESP server stopped");
+        } catch (Exception e) {
+            Log.e(TAG, "Error stopping native server", e);
+            sendLog("⚠ Warning: " + e.getMessage());
+        }
+        
         isRunning = false;
         
         if (espThread != null) {
             espThread.interrupt();
             espThread = null;
         }
+        
+        sendLog("✓ ESP Service destroyed");
+        sendLog("═══════════════════════════════");
         
         instance = null;
         super.onDestroy();
@@ -57,12 +74,35 @@ public class EspService extends Service {
     private void startEspThread() {
         espThread = new Thread(() -> {
             try {
+                Log.d(TAG, "═══ INJECTION SEQUENCE START ═══");
+                sendLog("═══════════════════════════════");
+                sendLog("▶ Injection Sequence:");
+                sendLog("═══════════════════════════════");
+                
+                sendLog("Step 1: Starting socket server...");
+                sendLog("        Port: 9557");
+                
+                sendLog("Step 2: Searching for Standoff 2 process...");
+                
+                sendLog("Step 3: Loading libunity.so...");
+                
+                sendLog("Step 4: Initializing ESP renderer...");
+                
                 Log.d(TAG, "Starting native ESP server...");
-                sendLog("Starting native ESP server on port 9557...");
                 startNativeEspServer();
+                
+                sendLog("═══════════════════════════════");
+                sendLog("✓ INJECTION COMPLETE - ESP ACTIVE");
+                sendLog("═══════════════════════════════");
+                
+            } catch (UnsatisfiedLinkError e) {
+                Log.e(TAG, "Native library error: " + e.getMessage(), e);
+                sendLog("✗ Native library not loaded");
+                sendLog("═══════════════════════════════");
             } catch (Exception e) {
-                Log.e(TAG, "Error in ESP thread: " + e.getMessage(), e);
-                sendLog("Error in ESP thread: " + e.getMessage());
+                Log.e(TAG, "Injection error: " + e.getMessage(), e);
+                sendLog("✗ Injection failed: " + e.getMessage());
+                sendLog("═══════════════════════════════");
             }
         });
         espThread.start();

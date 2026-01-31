@@ -69,10 +69,21 @@ public class MainActivity extends AppCompatActivity {
         startButton = findViewById(R.id.start_button);
         stopButton = findViewById(R.id.stop_button);
         
+        // Disable buttons initially
+        startButton.setEnabled(false);
+        stopButton.setEnabled(false);
+        
         startButton.setOnClickListener(v -> startEspService());
-        stopButton.setOnClickListener(v -> stopEspService());
+        stopButton.setOnClickListener(v -> {
+            stopButton.setEnabled(false);
+            stopEspService();
+            uiHandler.postDelayed(() -> stopButton.setEnabled(false), 1000);
+        });
         
         updateStatus("Initializing...");
+        addLog("═══════════════════════════════");
+        addLog("ESP V8 RELEASE");
+        addLog("═══════════════════════════════");
         addLog("Application started");
         
         // Register broadcast receiver for logs from service
@@ -81,8 +92,8 @@ public class MainActivity extends AppCompatActivity {
             new IntentFilter("ESP_LOG_UPDATE")
         );
         
-        // Check root access
-        checkRootAccess();
+        // Check root access FIRST - this is critical
+        requestRootAccessDialog();
         
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -90,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
                 addLog("Overlay permission not granted");
                 requestOverlayPermission();
             } else {
-                addLog("Overlay permission already granted");
+                addLog("✓ Overlay permission already granted");
             }
         }
     }
@@ -101,6 +112,64 @@ public class MainActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(logReceiver);
     }
 
+    private void requestRootAccessDialog() {
+        addLog("═══════════════════════════════");
+        addLog("▶ Root Access Required");
+        addLog("═══════════════════════════════");
+        
+        new AlertDialog.Builder(this)
+            .setTitle("Требуются рут права")
+            .setMessage("Приложение требует рут доступ для работы.\n\n" +
+                       "Когда появится диалог SuperUser/Magisk - нажмите РАЗРЕШИТЬ")
+            .setPositiveButton("Запросить", (d, w) -> {
+                addLog("Requesting root access...");
+                performRootRequest();
+            })
+            .setNegativeButton("Отмена", (d, w) -> {
+                addLog("✗ Root access request cancelled");
+                updateStatus("Error: Root access required");
+            })
+            .setCancelable(false)
+            .show();
+    }
+    
+    private void performRootRequest() {
+        new Thread(() -> {
+            try {
+                addLog("Executing 'su' command...");
+                Process process = Runtime.getRuntime().exec("su");
+                process.getOutputStream().write("exit\n".getBytes());
+                process.getOutputStream().flush();
+                process.getOutputStream().close();
+                int exitValue = process.waitFor();
+                
+                uiHandler.post(() -> {
+                    if (exitValue == 0) {
+                        addLog("✓ Root access granted!");
+                        addLog("═══════════════════════════════");
+                        hasRootAccess = true;
+                        startButton.setEnabled(true);
+                        updateStatus("Ready (Root Access: YES)");
+                    } else {
+                        addLog("✗ Root access denied");
+                        addLog("═══════════════════════════════");
+                        hasRootAccess = false;
+                        updateStatus("Error: Root access denied");
+                        showRootWarningDialog();
+                    }
+                });
+            } catch (Exception e) {
+                uiHandler.post(() -> {
+                    addLog("✗ Error requesting root: " + e.getMessage());
+                    addLog("═══════════════════════════════");
+                    hasRootAccess = false;
+                    updateStatus("Error: Root check failed");
+                    showRootWarningDialog();
+                });
+            }
+        }).start();
+    }
+    
     private void checkRootAccess() {
         addLog("Checking root access...");
         
@@ -109,12 +178,14 @@ public class MainActivity extends AppCompatActivity {
             
             uiHandler.post(() -> {
                 if (hasRootAccess) {
-                    addLog("✓ Root access granted");
-                    updateStatus("Ready (Root Available)");
+                    addLog("✓ Root access confirmed");
+                    startButton.setEnabled(true);
+                    updateStatus("Ready (Root Access: YES)");
                 } else {
                     addLog("✗ Root access not available");
                     addLog("Warning: ESP requires root access");
-                    updateStatus("Ready (No Root - Blocked)");
+                    startButton.setEnabled(false);
+                    updateStatus("Ready (Root Access: NO)");
                     
                     // Show warning dialog
                     showRootWarningDialog();
@@ -186,43 +257,21 @@ public class MainActivity extends AppCompatActivity {
         }
         
         if (!hasRootAccess) {
-            addLog("Error: Root access required to start");
+            addLog("❌ Error: Root access required");
             showRootWarningDialog();
-            // Re-check root just in case
-            checkRootAccess();
             return;
         }
         
-        addLog("Starting ESP service...");
-        updateStatus("Starting...");
+        addLog("═══════════════════════════════");
+        addLog("▶ Starting ESP Service...");
+        addLog("═══════════════════════════════");
+        updateStatus("Initializing...");
         
-        // Start ESP service
-        Intent espIntent = new Intent(this, EspService.class);
-        startService(espIntent);
-        
-        // Start Overlay service (Cheat Menu)
-        Intent overlayIntent = new Intent(this, OverlayService.class);
-        startService(overlayIntent);
-        
-        isEspRunning = true;
-        
-        addLog("ESP service started");
-        
-        // Simulate injection process
-        addLog("Injecting libsound_helper.so via MOF...");
-        
-        // Check if Standoff 2 is installed
-        if (isStandoff2Installed()) {
-            addLog("Standoff 2 detected");
-            
-            // Launch Standoff 2 after a short delay
-            uiHandler.postDelayed(() -> {
-                addLog("Cheat menu injected successfully");
-                launchStandoff2();
-            }, 1500);
-        } else {
-            addLog("Warning: Standoff 2 is not installed");
-            updateStatus("ESP Running (Standoff 2 not found)");
+        // Check Standoff 2 first
+        if (!isStandoff2Installed()) {
+            addLog("❌ Standoff 2 не установлен");
+            addLog("═══════════════════════════════");
+            updateStatus("Error: Standoff 2 not found");
             
             new AlertDialog.Builder(this)
                 .setTitle("Standoff 2 Not Found")
@@ -230,9 +279,56 @@ public class MainActivity extends AppCompatActivity {
                            "Please install it first.")
                 .setPositiveButton("OK", null)
                 .show();
+            return;
+        }
+        addLog("✓ Standoff 2 detected");
+        
+        // Start ESP service
+        try {
+            Intent espIntent = new Intent(this, EspService.class);
+            startService(espIntent);
+            addLog("✓ ESP Service started");
+        } catch (Exception e) {
+            addLog("❌ Failed to start ESP Service: " + e.getMessage());
+            Log.e(TAG, "ESP Service error", e);
+            return;
         }
         
-        updateStatus("ESP Service Running");
+        // Start Overlay service (Cheat Menu)
+        try {
+            Intent overlayIntent = new Intent(this, OverlayService.class);
+            startService(overlayIntent);
+            addLog("✓ Overlay Service started");
+        } catch (Exception e) {
+            addLog("⚠ Warning: Overlay Service failed: " + e.getMessage());
+            Log.e(TAG, "Overlay Service error", e);
+        }
+        
+        isEspRunning = true;
+        startButton.setEnabled(false);
+        stopButton.setEnabled(true);
+        
+        addLog("✓ Services initialized");
+        updateStatus("ESP Running - Waiting for injection...");
+        
+        // Launch Standoff 2 after a short delay
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+                uiHandler.post(() -> {
+                    addLog("═══════════════════════════════");
+                    addLog("▶ Launching Standoff 2...");
+                    addLog("═══════════════════════════════");
+                    launchStandoff2();
+                });
+            } catch (Exception e) {
+                uiHandler.post(() -> {
+                    addLog("❌ Error: " + e.getMessage());
+                    Log.e(TAG, "Launch delay error", e);
+                });
+            }
+        }).start();
+        
         Log.d(TAG, "ESP Service started");
     }
 
@@ -273,21 +369,46 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
-        addLog("Stopping ESP service...");
+        addLog("═══════════════════════════════");
+        addLog("⏹ Stopping ESP Service...");
+        addLog("═══════════════════════════════");
         
-        // Stop ESP service
-        Intent espIntent = new Intent(this, EspService.class);
-        stopService(espIntent);
-        
-        // Stop overlay service
-        Intent overlayIntent = new Intent(this, OverlayService.class);
-        stopService(overlayIntent);
-        
-        isEspRunning = false;
-        
-        updateStatus("ESP Service Stopped");
-        addLog("ESP service stopped");
-        Log.d(TAG, "ESP Service stopped");
+        // Run in separate thread to prevent UI freeze
+        new Thread(() -> {
+            try {
+                // Stop services with timeout protection
+                Intent espIntent = new Intent(MainActivity.this, EspService.class);
+                stopService(espIntent);
+                uiHandler.post(() -> addLog("✓ ESP Service stopped"));
+                
+                Thread.sleep(200);
+                
+                Intent overlayIntent = new Intent(MainActivity.this, OverlayService.class);
+                stopService(overlayIntent);
+                uiHandler.post(() -> addLog("✓ Overlay Service stopped"));
+                
+                isEspRunning = false;
+                
+                uiHandler.post(() -> {
+                    updateStatus("ESP Service Stopped");
+                    addLog("═══════════════════════════════");
+                    addLog("✓ INJECTION DETACHED");
+                    addLog("═══════════════════════════════");
+                    startButton.setEnabled(hasRootAccess);
+                    stopButton.setEnabled(false);
+                });
+                
+                Log.d(TAG, "ESP Service stopped");
+                
+            } catch (Exception e) {
+                uiHandler.post(() -> {
+                    addLog("✗ Error stopping: " + e.getMessage());
+                    Log.e(TAG, "Stop error", e);
+                    updateStatus("Error: " + e.getMessage());
+                    stopButton.setEnabled(true);
+                });
+            }
+        }).start();
     }
 
     private void updateStatus(String message) {
