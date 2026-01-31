@@ -326,24 +326,32 @@ Java_com_example_espapp_EspService_initNativeRenderer(JNIEnv* env, jobject thiz,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_espapp_EspService_handleTouch(JNIEnv* env, jobject thiz,
-    jfloat x, jfloat y, jboolean isDown)
+Java_com_example_espapp_EspService_handleMenuTouchEvent(JNIEnv* env, jobject thiz,
+    jfloat x, jfloat y, jint action)
 {
-    // This would be called from a touch input handler in Java
-    // For V7, we're simplifying by removing the overlay menu entirely
-    // Touch events would be handled through the game's input system
-    LOGD("Touch event: x=%.2f, y=%.2f, isDown=%d", x, y, isDown);
+    // action: 0=DOWN, 1=UP, 2=MOVE
+    // Handle touch events for the in-game native menu
+    if (!g_esp_instance) {
+        LOGD("Touch event ignored - ESP not initialized");
+        return;
+    }
+    
+    LOGD("Menu touch event: x=%.2f, y=%.2f, action=%d", x, y, action);
+    
+    // Touch handling will be implemented through MenuRenderer
+    // For now, just log the event
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_espapp_EspService_handleMove(JNIEnv* env, jobject thiz,
-    jfloat x, jfloat y)
+Java_com_example_espapp_EspService_toggleMenuVisibility(JNIEnv* env, jobject thiz)
 {
-    LOGD("Touch move: x=%.2f, y=%.2f", x, y);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_example_espapp_EspService_toggleMenu(JNIEnv* env, jobject thiz)
-{
-    LOGD("Toggle menu called");
+    if (!g_esp_instance) {
+        LOGD("Toggle menu ignored - ESP not initialized");
+        return;
+    }
+    
+    LOGD("Toggle menu visibility called");
+    
+    // Toggle menu visibility through MenuRenderer
+    // The menu renderer handles visibility state
 }

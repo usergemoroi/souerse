@@ -5,23 +5,22 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.PixelFormat;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.WindowManager;
-import android.widget.FrameLayout;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+/**
+ * OverlayService V7 - Pure Native Renderer Mode
+ * 
+ * NO OVERLAY - All UI rendering happens natively via OpenGL inside the game
+ * This service only manages settings synchronization with the native renderer
+ */
 public class OverlayService extends Service {
     private static final String TAG = "OVERLAY_SERVICE_V7";
     
-    // V7: No more overlay menu - everything is rendered natively
     private CheatMenuV7 cheatMenu;
-    
     private EspSettings settings;
     
     private int playerCount = 0;
@@ -40,7 +39,6 @@ public class OverlayService extends Service {
             }
             if (intent.hasExtra("espData")) {
                 // Handle ESP data from native code
-                // This would be expanded when native code sends player data
             }
         }
     };
@@ -53,15 +51,16 @@ public class OverlayService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "Overlay service V7 created - Native rendering mode");
+        Log.d(TAG, "V7 Overlay service created - PURE NATIVE RENDERING MODE");
+        Log.d(TAG, "NO OVERLAY WINDOWS - Menu rendered inside game via OpenGL");
         
         uiHandler = new Handler(Looper.getMainLooper());
         settings = EspSettings.getInstance(this);
         
-        // V7: Initialize native renderer only
+        // Initialize native renderer only - NO OVERLAY
         initializeNativeRenderer();
         
-        // V7: Simplified menu (no overlay)
+        // Initialize settings manager (no UI)
         createCheatMenu();
         
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -85,11 +84,13 @@ public class OverlayService extends Service {
         }
     }
 
+    /**
+     * Initialize native OpenGL renderer
+     * Menu will be rendered inside the game via native code
+     */
     private void initializeNativeRenderer() {
-        // V7: Pure native rendering - menu is also rendered via OpenGL
-        Log.d(TAG, "V7: Initializing native OpenGL menu renderer");
+        Log.d(TAG, "V7: Initializing native OpenGL menu renderer (INJECT MODE)");
         
-        // Initialize native renderer with screen dimensions
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
         
@@ -98,18 +99,22 @@ public class OverlayService extends Service {
             espService.initNativeRenderer(screenWidth, screenHeight);
             espService.updateNativeSettings(settings);
             Log.d(TAG, "Native renderer initialized: " + screenWidth + "x" + screenHeight);
-            Log.d(TAG, "Native menu renderer active - No overlay window needed");
+            Log.d(TAG, "Native menu will render INSIDE the game - NO overlay window");
         }
     }
     
+    /**
+     * Create settings manager (no UI - CheatMenuV7 only manages settings sync)
+     */
     private void createCheatMenu() {
-        // V7: Simplified menu - no overlay, settings only
         cheatMenu = new CheatMenuV7(this);
-        Log.d(TAG, "CheatMenu V7 created (native rendering)");
+        Log.d(TAG, "CheatMenu V7 created (native rendering only, no overlay)");
     }
 
+    /**
+     * Settings update loop - syncs to native renderer
+     */
     private void startEspUpdateLoop() {
-        // V7: Settings update loop for native renderer and menu
         uiHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -120,17 +125,20 @@ public class OverlayService extends Service {
     }
 
     private void updateEspData() {
-        // V7: Native code handles all ESP data
+        // Native code handles all ESP data
     }
     
+    /**
+     * Synchronize settings to native renderer
+     * The native menu reads and updates these settings directly
+     */
     private void updateNativeSettings() {
-        // V7: Send updated settings to native renderer
         EspService espService = EspService.getInstance();
         if (espService != null) {
             espService.updateNativeSettings(settings);
         }
         
-        // V7: Menu reads settings directly from native renderer
+        // Sync settings state
         if (cheatMenu != null) {
             cheatMenu.syncSettings();
         }
