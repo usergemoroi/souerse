@@ -11,6 +11,8 @@ V2release.apk
 !apk/V4release.apk
 # Exception: Allow V5release.apk in apk/ folder
 !apk/V5release.apk
+# Exception: Allow V6release.apk in apk/ folder
+!apk/V6release.apk
 *.aar
 *.ap_
 *.aab
