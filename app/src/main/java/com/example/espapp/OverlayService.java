@@ -12,47 +12,40 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.TextView;
+import android.widget.FrameLayout;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class OverlayService extends Service {
     private static final String TAG = "OVERLAY_SERVICE";
     
     private WindowManager windowManager;
-    private View overlayView;
-    private TextView statusText;
-    private TextView playersText;
-    private TextView fpsText;
-    private Button stopButton;
-    private Button hideButton;
+    private FrameLayout overlayContainer;
+    private EspRenderer espRenderer;
+    private CheatMenu cheatMenu;
+    
+    private EspSettings settings;
+    private EspData espData;
     
     private int playerCount = 0;
     private int fps = 0;
-    private long lastFpsUpdate = 0;
-    private int frameCount = 0;
-    
     private Handler uiHandler;
     
-    private float initialX;
-    private float initialY;
-    private float initialTouchX;
-    private float initialTouchY;
+    private WindowManager.LayoutParams overlayParams;
 
     private final BroadcastReceiver overlayReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.hasExtra("playerCount")) {
                 playerCount = intent.getIntExtra("playerCount", 0);
-                updateOverlayInfo();
+                updateEspData();
             }
             if (intent.hasExtra("fps")) {
                 fps = intent.getIntExtra("fps", 0);
-                updateOverlayInfo();
+            }
+            if (intent.hasExtra("espData")) {
+                // Handle ESP data from native code
+                // This would be expanded when native code sends player data
             }
         }
     };
@@ -69,17 +62,18 @@ public class OverlayService extends Service {
         
         uiHandler = new Handler(Looper.getMainLooper());
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        settings = EspSettings.getInstance(this);
+        espData = new EspData();
         
-        createOverlayView();
+        createOverlayRenderer();
+        createCheatMenu();
         
-        // Register broadcast receiver
         LocalBroadcastManager.getInstance(this).registerReceiver(
             overlayReceiver,
             new IntentFilter("ESP_OVERLAY_UPDATE")
         );
         
-        // Start FPS counter
-        startFpsCounter();
+        startEspUpdateLoop();
     }
 
     @Override
@@ -89,35 +83,28 @@ public class OverlayService extends Service {
         
         LocalBroadcastManager.getInstance(this).unregisterReceiver(overlayReceiver);
         
-        if (overlayView != null && windowManager != null) {
-            windowManager.removeView(overlayView);
-            overlayView = null;
+        if (cheatMenu != null) {
+            cheatMenu.destroy();
+            cheatMenu = null;
+        }
+        
+        if (overlayContainer != null && windowManager != null) {
+            try {
+                windowManager.removeView(overlayContainer);
+                overlayContainer = null;
+            } catch (Exception e) {
+                Log.e(TAG, "Error removing overlay: " + e.getMessage(), e);
+            }
         }
     }
 
-    private void createOverlayView() {
-        LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-        overlayView = inflater.inflate(R.layout.overlay_layout, null);
+    private void createOverlayRenderer() {
+        overlayContainer = new FrameLayout(this);
+        overlayContainer.setBackgroundColor(0x00000000);
         
-        // Get views
-        statusText = overlayView.findViewById(R.id.overlay_status);
-        playersText = overlayView.findViewById(R.id.overlay_players);
-        fpsText = overlayView.findViewById(R.id.overlay_fps);
-        stopButton = overlayView.findViewById(R.id.overlay_stop_button);
-        hideButton = overlayView.findViewById(R.id.overlay_hide_button);
+        espRenderer = new EspRenderer(this);
+        overlayContainer.addView(espRenderer);
         
-        // Set button listeners
-        stopButton.setOnClickListener(v -> {
-            Log.d(TAG, "Stop button clicked");
-            stopEspService();
-        });
-        
-        hideButton.setOnClickListener(v -> {
-            Log.d(TAG, "Hide button clicked");
-            hideOverlay();
-        });
-        
-        // Setup window parameters
         int layoutFlag;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             layoutFlag = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
@@ -125,99 +112,101 @@ public class OverlayService extends Service {
             layoutFlag = WindowManager.LayoutParams.TYPE_PHONE;
         }
         
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+        overlayParams = new WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
             layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | 
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         );
         
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.x = 100;
-        params.y = 100;
+        overlayParams.gravity = Gravity.TOP | Gravity.START;
+        overlayParams.x = 0;
+        overlayParams.y = 0;
         
-        // Add touch listener for dragging
-        overlayView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        initialX = params.x;
-                        initialY = params.y;
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
-                        return true;
-                        
-                    case MotionEvent.ACTION_MOVE:
-                        params.x = (int) (initialX + (event.getRawX() - initialTouchX));
-                        params.y = (int) (initialY + (event.getRawY() - initialTouchY));
-                        windowManager.updateViewLayout(overlayView, params);
-                        return true;
-                }
-                return false;
-            }
-        });
-        
-        // Add view to window
-        windowManager.addView(overlayView, params);
-        Log.d(TAG, "Overlay view added to window");
-        
-        updateOverlayInfo();
+        try {
+            windowManager.addView(overlayContainer, overlayParams);
+            Log.d(TAG, "ESP overlay renderer created");
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating overlay renderer: " + e.getMessage(), e);
+        }
+    }
+    
+    private void createCheatMenu() {
+        cheatMenu = new CheatMenu(this);
+        Log.d(TAG, "Cheat menu created");
     }
 
-    private void updateOverlayInfo() {
-        if (overlayView == null) return;
-        
-        uiHandler.post(() -> {
-            statusText.setText("Status: Running");
-            playersText.setText("Players: " + playerCount);
-            fpsText.setText("FPS: " + fps);
-        });
-    }
-
-    private void startFpsCounter() {
+    private void startEspUpdateLoop() {
         uiHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (overlayView != null) {
-                    frameCount++;
-                    long currentTime = System.currentTimeMillis();
-                    
-                    if (currentTime - lastFpsUpdate >= 1000) {
-                        fps = frameCount;
-                        frameCount = 0;
-                        lastFpsUpdate = currentTime;
-                        updateOverlayInfo();
-                    }
-                    
-                    uiHandler.postDelayed(this, 16); // ~60 FPS
+                if (espRenderer != null) {
+                    updateEspData();
+                    uiHandler.postDelayed(this, 16);
                 }
             }
         }, 16);
     }
 
-    private void stopEspService() {
-        // Stop ESP service
-        Intent espIntent = new Intent(this, EspService.class);
-        stopService(espIntent);
+    private void updateEspData() {
+        if (espData == null || espRenderer == null) return;
         
-        // Stop self
-        stopSelf();
+        espData.playerCount = playerCount;
+        espData.screenWidth = getResources().getDisplayMetrics().widthPixels;
+        espData.screenHeight = getResources().getDisplayMetrics().heightPixels;
+        espData.centerX = espData.screenWidth / 2;
+        espData.centerY = espData.screenHeight;
         
-        Log.d(TAG, "ESP and overlay services stopped");
-    }
-
-    private void hideOverlay() {
-        if (overlayView != null) {
-            overlayView.setVisibility(View.GONE);
-            
-            // Show again after 5 seconds
-            uiHandler.postDelayed(() -> {
-                if (overlayView != null) {
-                    overlayView.setVisibility(View.VISIBLE);
-                }
-            }, 5000);
+        if (playerCount > 0 && espData.players.length < playerCount) {
+            espData.players = new EspData.PlayerInfo[playerCount];
+            for (int i = 0; i < playerCount; i++) {
+                espData.players[i] = createMockPlayerData(i);
+            }
         }
+        
+        espRenderer.updateEspData(espData);
+    }
+    
+    private EspData.PlayerInfo createMockPlayerData(int index) {
+        EspData.PlayerInfo player = new EspData.PlayerInfo();
+        
+        float screenWidth = getResources().getDisplayMetrics().widthPixels;
+        float screenHeight = getResources().getDisplayMetrics().heightPixels;
+        
+        float angle = (float) (index * Math.PI * 2 / Math.max(playerCount, 1));
+        float radius = 200 + index * 50;
+        
+        float centerX = screenWidth / 2;
+        float centerY = screenHeight / 2;
+        
+        player.screenX = centerX + (float) Math.cos(angle) * radius;
+        player.screenY = centerY + (float) Math.sin(angle) * radius;
+        
+        float boxWidth = 60;
+        float boxHeight = 120;
+        
+        player.boxLeft = player.screenX - boxWidth / 2;
+        player.boxRight = player.screenX + boxWidth / 2;
+        player.boxTop = player.screenY - boxHeight;
+        player.boxBottom = player.screenY;
+        
+        player.headX = player.screenX;
+        player.headY = player.boxTop;
+        player.footX = player.screenX;
+        player.footY = player.boxBottom;
+        
+        player.distance = radius / 10.0f;
+        player.health = 50 + (index * 13) % 100;
+        player.maxHealth = 100;
+        player.armor = (index * 27) % 100;
+        player.team = index % 2;
+        player.name = "Player" + (index + 1);
+        player.isVisible = true;
+        player.isEnemy = player.team != 0;
+        
+        return player;
     }
 }

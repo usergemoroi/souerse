@@ -7,4 +7,15 @@
     <color name="red_500">#FFEB3B3B</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- Cheat Menu Colors -->
+    <color name="cheat_bg">#E0121212</color>
+    <color name="cheat_accent_cyan">#FF00FFFF</color>
+    <color name="cheat_accent_green">#FF00FF00</color>
+    <color name="cheat_accent_yellow">#FFFFFF00</color>
+    <color name="cheat_accent_red">#FFFF0000</color>
+    <color name="cheat_accent_magenta">#FFFF00FF</color>
+    <color name="cheat_text_primary">#FFFFFFFF</color>
+    <color name="cheat_text_secondary">#FFCCCCCC</color>
+    <color name="cheat_divider">#FF333333</color>
 </resources>
