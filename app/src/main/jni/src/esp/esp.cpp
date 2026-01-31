@@ -21,6 +21,12 @@ static int g_frame_counter = 0;
 
 ESP::ESP(uint32_t libunity_base) : libunity_base_(libunity_base) {
     native_renderer_ = new ESPRenderer();
+    
+    // Initialize menu renderer
+    if (native_renderer_ && native_renderer_->getMenuRenderer()) {
+        native_renderer_->getMenuRenderer()->init(1920, 1080);
+        native_renderer_->getMenuRenderer()->setSettings(&native_renderer_->getSettings());
+    }
 }
 
 ESP::~ESP() {
