@@ -93,7 +93,7 @@ public class CheatMenu {
         titleBar.setGravity(Gravity.CENTER_VERTICAL);
         
         menuTitle = new TextView(context);
-        menuTitle.setText("⚡ CHEAT MENU V5 ⚡");
+        menuTitle.setText("⚡ CHEAT MENU V6 ⚡");
         menuTitle.setTextColor(0xFF00FFFF);
         menuTitle.setTextSize(18);
         menuTitle.setPadding(0, 0, 20, 0);

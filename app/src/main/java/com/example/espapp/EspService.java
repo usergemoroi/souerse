@@ -112,7 +112,43 @@ public class EspService extends Service {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
+    public void updateNativeSettings(EspSettings settings) {
+        updateNativeSettings(
+            settings.espLines,
+            settings.espBox,
+            settings.espHealthBars,
+            settings.espSkeleton,
+            settings.espNames,
+            settings.espDistance,
+            settings.aimbotIndicator,
+            settings.wallhack,
+            settings.showEnemies,
+            settings.showFriendlies,
+            settings.lineThickness,
+            settings.boxThickness,
+            settings.textSize,
+            settings.opacity,
+            settings.maxDistance,
+            settings.lineColor,
+            settings.boxColor,
+            settings.healthBarColor,
+            settings.skeletonColor,
+            settings.nameColor,
+            settings.distanceColor,
+            settings.aimbotColor
+        );
+    }
+
     // Native methods
     private native void startNativeEspServer();
     private native void stopNativeEspServer();
+    public native void initNativeRenderer(int screenWidth, int screenHeight);
+    private native void updateNativeSettings(
+        boolean espLines, boolean espBox, boolean espHealthBars, boolean espSkeleton,
+        boolean espNames, boolean espDistance, boolean aimbotIndicator, boolean wallhack,
+        boolean showEnemies, boolean showFriendlies,
+        float lineThickness, float boxThickness, float textSize, float opacity, float maxDistance,
+        int lineColor, int boxColor, int healthBarColor, int skeletonColor,
+        int nameColor, int distanceColor, int aimbotColor
+    );
 }

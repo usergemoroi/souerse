@@ -1,6 +1,9 @@
 #include "memory/memory.h"
 #include "network/socket_server.h"
 #include "esp/esp.h"
+#include "esp/esp_renderer.h"
+#include "render/native_renderer.h"
+#include "hooks/gl_hook.h"
 #include <unistd.h>
 #include <cstdio>
 #include <pthread.h>
@@ -10,6 +13,8 @@
 #define LOG_TAG "ESP_NATIVE"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+static ESP* g_esp_instance = nullptr;
 
 static bool g_running = false;
 static pthread_t g_esp_thread;
@@ -156,6 +161,9 @@ void* espMainLoop(void* arg)
     sendLogToJava("ESP is now running");
     
     ESP esp(libUnityBase);
+    g_esp_instance = &esp;
+    
+    NativeRenderer::getInstance().init(1920, 1080);
 
     int frameCount = 0;
     long lastFpsTime = 0;
@@ -253,9 +261,61 @@ Java_com_example_espapp_EspService_stopNativeEspServer(JNIEnv* env, jobject thiz
     LOGD("ESP thread stopped");
     sendLogToJava("ESP thread stopped");
     
+    g_esp_instance = nullptr;
+    
     // Clean up global references
     if (g_espServiceClass && env) {
         env->DeleteGlobalRef(g_espServiceClass);
         g_espServiceClass = nullptr;
     }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_espapp_EspService_updateNativeSettings(JNIEnv* env, jobject thiz,
+    jboolean espLines, jboolean espBox, jboolean espHealthBars, jboolean espSkeleton,
+    jboolean espNames, jboolean espDistance, jboolean aimbotIndicator, jboolean wallhack,
+    jboolean showEnemies, jboolean showFriendlies,
+    jfloat lineThickness, jfloat boxThickness, jfloat textSize, jfloat opacity, jfloat maxDistance,
+    jint lineColor, jint boxColor, jint healthBarColor, jint skeletonColor,
+    jint nameColor, jint distanceColor, jint aimbotColor)
+{
+    if (!g_esp_instance) return;
+    
+    RenderSettings settings;
+    settings.espLines = espLines;
+    settings.espBox = espBox;
+    settings.espHealthBars = espHealthBars;
+    settings.espSkeleton = espSkeleton;
+    settings.espNames = espNames;
+    settings.espDistance = espDistance;
+    settings.aimbotIndicator = aimbotIndicator;
+    settings.wallhack = wallhack;
+    settings.showEnemies = showEnemies;
+    settings.showFriendlies = showFriendlies;
+    
+    settings.lineThickness = lineThickness;
+    settings.boxThickness = boxThickness;
+    settings.textSize = textSize;
+    settings.opacity = opacity;
+    settings.maxDistance = maxDistance;
+    
+    settings.lineColor = Color((uint32_t)lineColor);
+    settings.boxColor = Color((uint32_t)boxColor);
+    settings.healthBarColor = Color((uint32_t)healthBarColor);
+    settings.skeletonColor = Color((uint32_t)skeletonColor);
+    settings.nameColor = Color((uint32_t)nameColor);
+    settings.distanceColor = Color((uint32_t)distanceColor);
+    settings.aimbotColor = Color((uint32_t)aimbotColor);
+    
+    NativeRenderer::getInstance().setSettings(settings);
+    
+    LOGD("Native settings updated");
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_espapp_EspService_initNativeRenderer(JNIEnv* env, jobject thiz,
+    jint screenWidth, jint screenHeight)
+{
+    NativeRenderer::getInstance().init(screenWidth, screenHeight);
+    LOGD("Native renderer initialized: %dx%d", screenWidth, screenHeight);
 }
